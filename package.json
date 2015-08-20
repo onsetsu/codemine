@@ -43,7 +43,8 @@
   "scripts": {},
   "dependencies": {
     "esprima": "^2.5.0",
-    "estools": "^1.0.3"
+    "estools": "^1.0.3",
+    "gulp": "^3.9.0"
   },
   "devDependencies": {},
   "engines": {
