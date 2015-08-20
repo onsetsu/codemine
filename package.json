@@ -1,0 +1,53 @@
+{
+  "name": "codemine",
+  "version": "0.0.1",
+  "description": "Analysing JavaScript modules for hidden aspects using LDA.",
+  "keywords": [
+    "esprima",
+    "estools",
+    "module",
+    "modules",
+    "parser",
+    "lda",
+    "analysis",
+    "analyser",
+    "metric"
+  ],
+  "homepage": "https://github.com/onsetsu/codemine/",
+  "bugs": {
+    "url": "https://github.com/onsetsu/codemine/issues",
+    "email": "stefan.lehmann@student.hpi.uni-potsdam.de"
+  },
+  "license": "MIT",
+  "contributors": [
+    {
+      "name": "Stefan Lehmann",
+      "email": "stefan.lehmann@student.hpi.uni-potsdam.de",
+      "url": "https://github.com/onsetsu"
+    }
+  ],
+  "files": [
+    "index.js",
+    "TODO"
+  ],
+  "main": "index.js",
+  "bin": "TODO",
+  "man": "TODO",
+  "directories": {
+    "lib": "TODO"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/onsetsu/codemine.git"
+  },
+  "scripts": {},
+  "dependencies": {
+    "esprima": "^2.5.0",
+    "estools": "^1.0.3"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">= 0.12.4",
+    "npm": "~2.10.1"
+  }
+}
