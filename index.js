@@ -14,22 +14,7 @@ class WordIndexMapper {
 var esprima = require('esprima');
 var estools = require('estools');
 
-var testAST = esprima.parse(`/*
- * Life, Universe, and Everything
- */
-function answer() {
-    var answer = 6 * 7;
-
-    // returning the answer
-    return answer;
-    // this is after the return O_o
-}
-
-answer(6, 7);`);
-
-console.log(testAST);
-
-estools.traverse(testAST, {
+var logVisitor = {
     enter: function(node, parent) {
         switch(node.type) {
             case 'Literal':
@@ -43,24 +28,18 @@ estools.traverse(testAST, {
                 break;
         }
     }
-});
-
-console.log('------------ FS ------------');
-var fs = require('fs');
-fs.readFile('index.js', 'utf8', function(err, data) {
-    if (err) {
-        return console.log(err);
-    }
-    //console.log(data);
-});
+};
 
 console.log('------------ GULP ------------');
 var gulp = require('gulp');
-var gulpCodemine = require('./gulp-codemine');
+var gulpApplyFn = require('./gulp-applyfn');
 
 gulp.task('codemine', function () {
     return gulp.src('sample/**/*.js')
-        .pipe(gulpCodemine(function(x) { console.log(x); }));
+        .pipe(gulpApplyFn(function(sourceCode) {
+            var ast = esprima.parse(sourceCode);
+            estools.traverse(ast, logVisitor);
+        }));
 });
 
 gulp.start('codemine');

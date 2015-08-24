@@ -4,7 +4,7 @@ var gutil = require('gulp-util');
 var PluginError = gutil.PluginError;
 
 // consts
-const PLUGIN_NAME = 'gulp-codemine';
+const PLUGIN_NAME = 'gulp-applyfn';
 
 // plugin level function (dealing with files)
 function applyFunction(fn) {
