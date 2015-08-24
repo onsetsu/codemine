@@ -11,9 +11,8 @@ class WordIndexMapper {
     }
 }
 
-import * as esprima from 'esprima'
-import * as estools from 'estools'
-import * as gulp from 'gulp'
+var esprima = require('esprima');
+var estools = require('estools');
 
 var testAST = esprima.parse(`/*
  * Life, Universe, and Everything
@@ -45,3 +44,23 @@ estools.traverse(testAST, {
         }
     }
 });
+
+console.log('------------ FS ------------');
+var fs = require('fs');
+fs.readFile('index.js', 'utf8', function(err, data) {
+    if (err) {
+        return console.log(err);
+    }
+    //console.log(data);
+});
+
+console.log('------------ GULP ------------');
+var gulp = require('gulp');
+var gulpCodemine = require('./gulp-codemine');
+
+gulp.task('codemine', function () {
+    return gulp.src('sample/**/*.js')
+        .pipe(gulpCodemine(function(x) { console.log(x); }));
+});
+
+gulp.start('codemine');
