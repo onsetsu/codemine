@@ -14,7 +14,7 @@ function applyFunction(fn) {
 
     // creating a stream through which each file will pass
     var stream = through.obj(function(file, enc, cb) {
-        fn(file.contents.toString(enc));
+        fn(file, file.contents.toString(enc));
 
         cb(null, file);
         // or:

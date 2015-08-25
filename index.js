@@ -35,9 +35,10 @@ var gulp = require('gulp');
 var gulpApplyFn = require('./gulp-applyfn');
 
 gulp.task('codemine', function () {
-    return gulp.src('sample/**/*.js')
-        .pipe(gulpApplyFn(function(sourceCode) {
+    return gulp.src('sample/bloob-engine/**/*.js')
+        .pipe(gulpApplyFn(function(file, sourceCode) {
             var ast = esprima.parse(sourceCode);
+            console.log(file.path);
             estools.traverse(ast, logVisitor);
         }));
 });
