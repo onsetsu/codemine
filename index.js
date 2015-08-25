@@ -78,6 +78,14 @@ var packKeys = (function() {
     }
 })();
 
+function sumItems(arr) {
+    return arr.reduce((acc, value) => acc + value, 0);
+}
+
+// testing sumItems
+// console.log(sumItems([1,4,68,3]));
+// should be 76
+
 class LDDocumentFeatureSpace extends LDFeatureSpace {
     TfIdfIn(aFeatureId, aDocumentId) {
         return (this.frequencyOfIn(aFeatureId, aDocumentId))
@@ -106,12 +114,7 @@ class LDDocumentFeatureSpace extends LDFeatureSpace {
     }
 
     estimateFeaturePriors() {
-        var sum = 0;
-        this.perFeatureFrequency.forEach(freq => {
-            if(freq) {
-                sum += freq;
-            }
-        });
+        var sum = sumItems(this.perFeatureFrequency);
 
         return this.perFeatureFrequency.map(freq => freq / sum);
     }
@@ -258,6 +261,7 @@ class Matrix {
     }
 
     get(row, column) {
+        console.log(row, column);
         return this.contents[row][column];
     }
 
@@ -277,12 +281,118 @@ class Matrix {
         return new Matrix(rows, columns, element);
     }
 }
+// takes two Arrays and a callback, and maps into a new Array by calling the callback with same-indexed value from both input Arrays
+/**
+ *
+ * @param listA
+ * @param listB
+ * @param callback
+ * @returns {Array}
+ */
+function zipMap(listA, listB, callback) {
+    var upTo = Math.min(listA.length, listB.length),
+        arr = [];
+    for(var i = 0; i < upTo; i++) {
+        arr.push(callback(listA[i], listB[i], i, listA, listB));
+    }
+    return arr;
+}
+
+// testing zipMap
+// zipMap([1,2,3,4,5], [6,7,8], (a, b) => a + b);
+// should return [7, 9, 11];
+
+/*
+ * POLYFILL Array.prototype.findIndex
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex
+ */
+if (!Array.prototype.findIndex) {
+    Array.prototype.findIndex = function(predicate) {
+        if (this === null) {
+            throw new TypeError('Array.prototype.findIndex called on null or undefined');
+        }
+        if (typeof predicate !== 'function') {
+            throw new TypeError('predicate must be a function');
+        }
+        var list = Object(this);
+        var length = list.length >>> 0;
+        var thisArg = arguments[1];
+        var value;
+
+        for (var i = 0; i < length; i++) {
+            value = list[i];
+            if (predicate.call(thisArg, value, i, list)) {
+                return i;
+            }
+        }
+        return -1;
+    };
+}
 
 class LDMultinomial {
-    // TODO: implement this class
+    /**
+     * Even mixture of two multinomials
+     * @param aMultinomial
+     */
+    __add__(aMultinomial) {
+        return LDMultinomial.normalized(
+            zipMap(this.probabilities, aMultinomial.probabilities, (a, b) => a + b)
+        );
+    }
+
+    /**
+     * Non-normalizing addition. Faster in chained additions but requires subsequent normalization
+     * @param aMultinomial
+     */
+    __addadd__(aMultinomial) {
+        return LDMultinomial.raw(
+            zipMap(this.probabilities, aMultinomial.probabilities, (a, b) => a + b)
+        );
+    }
+
+    normalize() {
+        var sum = sumItems(this.probabilities);
+        this.probabilities = this.probabilities.map(p => p / sum);
+    }
+
+    observe(frequencies) {
+        this.probabilities = frequencies;
+        this.normalize();
+    }
+
+    /**
+     * Draw a sample index from the distribution
+     */
+    sample() {
+        var r = Math.random();
+        var foo = this.probabilities.findIndex((p, i, arr) => {
+            r -= p;
+            console.log('bar', r, p, i, arr);
+            if(r < 0) {
+                return true;
+            }
+            return false;
+        });
+        console.log('foo', foo, r);
+        return foo;
+    }
+
+    static initialize() {
+        // LDMultinomial initialize
+
+        this.Rand = new Random();
+    }
 
     static normalized(observation) {
-        return (new LDMultinomial()).observe(observation);
+        var multinomial = new LDMultinomial();
+        multinomial.observe(observation);
+        return multinomial;
+    }
+
+    static raw(observation) {
+        var multinomial = new LDMultinomial();
+        multinomial.probabilities = observation;
+        return multinomial;
     }
 }
 
@@ -311,10 +421,12 @@ class LDAllocator {
     associateFeatureWithDocAndTopicBy(feature, doc, topic, delta) {
         // update statistics to reflect association between word, topic and document
 
+        console.log("perDocumentTopics");
         this.perDocumentTopics.set(doc, topic,
             delta + this.perDocumentTopics.get(doc, topic)
         );
 
+        console.log("perTopicFeatures");
         this.perTopicFeatures.set(topic, feature,
             delta + this.perTopicFeatures.get(topic, feature)
         );
@@ -402,7 +514,7 @@ class LDAllocator {
                 var packedKey = packKeys(di, wj);
                 topic = this.perWordTopic.get(packedKey);
                 this.dissociateFeatureWithDocAndTopic(word, di, topic);
-                topic = this.topicProbabilityOverAndFeature(di, word).sample(); // TODO implement sample on LDMultinomial
+                topic = this.topicProbabilityOverAndFeature(di, word).sample();
                 this.associateFeatureWithDocAndTopic(word, di, topic);
                 this.perWordTopic.set(packedKey, topic);
             });
@@ -411,12 +523,12 @@ class LDAllocator {
 }
 
 var sixDocs = [
-    [1, 2, 3],
-    [1, 2, 2, 2],
-    [1, 1, 3],
-    [3, 4, 5],
-    [4, 5,],
-    [3, 5, 4, 3]
+    [0, 1, 2],
+    [0, 1, 1, 1],
+    [0, 0, 2],
+    [2, 3, 4],
+    [3, 4,],
+    [2, 4, 3, 2]
 ];
 
 var lda = new LDAllocator();
