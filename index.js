@@ -261,7 +261,6 @@ class Matrix {
     }
 
     get(row, column) {
-        console.log(row, column);
         return this.contents[row][column];
     }
 
@@ -365,16 +364,10 @@ class LDMultinomial {
      */
     sample() {
         var r = Math.random();
-        var foo = this.probabilities.findIndex((p, i, arr) => {
+        return this.probabilities.findIndex((p, i, arr) => {
             r -= p;
-            console.log('bar', r, p, i, arr);
-            if(r < 0) {
-                return true;
-            }
-            return false;
+            return r < 0;
         });
-        console.log('foo', foo, r);
-        return foo;
     }
 
     static initialize() {
@@ -396,11 +389,53 @@ class LDMultinomial {
     }
 }
 
+/**
+ * Calculate cosine similarity on two given vectors, represented as Arrays
+ * @param vector1
+ * @param vector2
+ * @returns {Number}
+ */
+function cosineSimilarity(vector1, vector2) {
+    return sumItems(zipMap(vector1, vector2, (i, k) => i * k));
+}
+
 class LDModel {
+    documentSimilarityOfAnd(doc1, doc2) {
+        return cosineSimilarity(
+            this.topicsForDocumentAt(doc1),
+            this.topicsForDocumentAt(doc2)
+        );
+    }
+
+    documentsForTopicAt(topic) {
+        return this.perDocumentTopics.atColumn(topic);
+    }
+
+    featureSimilarityOfAnd(word1, word2) {
+        return cosineSimilarity(
+            this.topicsForFeatureAt(word1),
+            this.topicsForFeatureAt(word2)
+        );
+    }
+
+    featuresForTopicAt(topic) {
+        return this.perTopicFeatures.atRow(topic);
+    }
+
     initializeTopicsAndDocumentsAndPriors(topics, documents, priors) {
         this.perTopicFeatures = topics;
         this.perDocumentTopics = documents;
         this.topicPriors = priors;
+
+        return this;
+    }
+
+    topicsForDocumentAt(docid) {
+        return this.perDocumentTopics.atRow(docid);
+    }
+
+    topicsForFeatureAt(word) {
+        return this.perTopicFeatures.atColumn(word);
     }
 }
 
@@ -421,12 +456,10 @@ class LDAllocator {
     associateFeatureWithDocAndTopicBy(feature, doc, topic, delta) {
         // update statistics to reflect association between word, topic and document
 
-        console.log("perDocumentTopics");
         this.perDocumentTopics.set(doc, topic,
             delta + this.perDocumentTopics.get(doc, topic)
         );
 
-        console.log("perTopicFeatures");
         this.perTopicFeatures.set(topic, feature,
             delta + this.perTopicFeatures.get(topic, feature)
         );
@@ -442,7 +475,10 @@ class LDAllocator {
     constructor() {}
 
     model() {
-        return (new LDModel()).initializeTopicsAndDocumentsAndPriors(perTopicFeatures, perDocumentTopics, topicPriors);
+        return (new LDModel()).initializeTopicsAndDocumentsAndPriors(
+            this.perTopicFeatures,
+            this.perDocumentTopics,
+            this.topicPriors);
     }
 
     randomize() {
@@ -527,9 +563,18 @@ var sixDocs = [
     [0, 1, 1, 1],
     [0, 0, 2],
     [2, 3, 4],
-    [3, 4,],
+    [3, 4],
     [2, 4, 3, 2]
 ];
 
 var lda = new LDAllocator();
 var model = lda.allocateIteratingFeaturesTopics(sixDocs, 10, 5, 2);
+
+console.log(model.featuresForTopicAt(0));
+console.log(model.featuresForTopicAt(1));
+
+console.log(model.topicsForDocumentAt(5));
+
+console.log(model.documentSimilarityOfAnd(0, 1));
+console.log(model.documentSimilarityOfAnd(4, 5));
+console.log(model.documentSimilarityOfAnd(1, 5));
