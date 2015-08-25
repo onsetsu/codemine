@@ -1,8 +1,29 @@
 "use strict";
 
+/*
+This class helps to transform arbitrary hashable features (e.g. words or
+collections of words) into natural numbers. The transformation is
+required, as LDAllocator only accepts integer features.
+
+    Example:
+
+space := LDFeatureSpace new.
+    space representAll: #(a b c 100).
+gives #(1 2 3 4)
+space representAll: #(a c d).
+subsequently gives  #(1 3 5) because a and c are already known as
+feature #1 and #3, c is inserted as new feature #5.
+
+The space needs to be retained for later interpretation of encoded results:
+
+    space interpret: 2
+gives #b
+space interpretAll: #(5 3 2 1)
+gives #(#d #c #b #a)
+*/
 class LDFeatureSpace {
     addNewFeature() {
-        "Hook for subclasses to reserve storage for new feature"
+        // Hook for subclasses to reserve storage for new feature
     }
 
     featureCount() {
@@ -38,6 +59,7 @@ class LDFeatureSpace {
     }
 }
 
+// utility; transforms two keys into a single one
 var packKeys = (function() {
     var storage = new Map();
 
@@ -178,6 +200,8 @@ gulp.task('codemine', function () {
 
 gulp.start('codemine');
 
+console.log('------------ Document Feature Space ------------');
+
 var space = new LDDocumentFeatureSpace();
 console.log(space);
 console.log(space.representAll(['foo', 'bar', 'blub']));
@@ -188,3 +212,200 @@ space.featureIdMap.forEach((value, key) => console.log(key, '>', value));
 // show entries in document-word matrix
 //space.documentFeatureCounts.forEach((value, key) => console.log(key, value));
 console.log(space);
+
+console.log('------------ LDA ------------');
+
+function timesDo(x, fn) {
+    for(let i = 0; i < x; i++) {
+        fn(x);
+    }
+}
+
+function fillArray(value, length) {
+    var arr = [];
+    for(var i = 0; i < length; i++) {
+        arr.push(value);
+    }
+    return arr;
+}
+function range(end) {
+    var arr = [];
+    for(var i = 0; i < end; i++) {
+        arr.push(i);
+    }
+    return arr;
+}
+
+// testing range
+// console.log(range(5));
+// console.log(range(25));
+
+class Random {
+    nextInt(upTo) {
+        return parseInt((Math.random() * upTo), 10);
+    }
+}
+
+// testing Random
+// fillArray(2, 20).forEach(upTo => console.log((new Random()).nextInt(upTo)));
+
+class Matrix {
+    constructor(rows, columns, element) {
+        this.contents = [];
+        for(var i = 0; i < rows; i++) {
+            this.contents.push(fillArray(element, columns));
+        }
+    }
+
+    get(row, column) {
+        return this.contents[row][column];
+    }
+
+    set(row, column, value) {
+        return this.contents[row][column] = value;
+    }
+
+    atRow(rowId) {
+        return this.contents[rowId];
+    }
+
+    atColumn(columnId) {
+        return this.contents.map(row => row[columnId]);
+    }
+
+    static rowsColumnsElement(rows, columns, element) {
+        return new Matrix(rows, columns, element);
+    }
+}
+
+class LDMultinomial {
+    // TODO: implement this class
+
+    static normalized(observation) {
+        return (new LDMultinomial()).observe(observation);
+    }
+}
+
+class LDModel {
+    initializeTopicsAndDocumentsAndPriors(topics, documents, priors) {
+        this.perTopicFeatures = topics;
+        this.perDocumentTopics = documents;
+        this.topicPriors = priors;
+    }
+}
+
+class LDAllocator {
+    allocateIteratingFeaturesTopics(docs, numIterations, numFeatures, numTopics) {
+        // Train model with given documents for given number of iterations.
+
+        this.setupForDocumentsFeatureCountTopicCount(docs, numFeatures, numTopics);
+        this.randomize();
+        timesDo(numIterations, this.update.bind(this));
+        return this.model();
+    }
+
+    associateFeatureWithDocAndTopic(feature, doc, topic) {
+        this.associateFeatureWithDocAndTopicBy(feature, doc, topic, 1);
+    }
+
+    associateFeatureWithDocAndTopicBy(feature, doc, topic, delta) {
+        // update statistics to reflect association between word, topic and document
+
+        this.perDocumentTopics.set(doc, topic,
+            delta + this.perDocumentTopics.get(doc, topics)
+        );
+
+        this.perTopicFeatures.set(topic, feature,
+            delta + this.perTopicFeatures.get(topic, feature)
+        );
+
+        this.perDocumentFrequency[doc] += delta;
+        this.perTopicFrequency[topic] += delta;
+    }
+
+    dissociateFeatureWithDocAndTopic(feature, doc, topic) {
+        this.associateFeatureWithDocAndTopicBy(feature, doc, topic, -1);
+    }
+
+    constructor() {}
+
+    model() {
+        return (new LDModel()).initializeTopicsAndDocumentsAndPriors(perTopicFeatures, perDocumentTopics, topicPriors);
+    }
+
+    randomize() {
+        //Initialize the topic model by assigning a random topic to each word"
+
+        var topic, random;
+
+        random = new Random();
+
+        this.documents.forEach((doc, di) => {
+            doc.forEach(word, wj => {
+                topic = random.nextInt(topicCount);
+                this.associateFeatureWithDocAndTopic(word, di, topic);
+                this.perWordTopic.set(packKeys(di, wj), topic);
+            });
+        });
+    }
+
+    setupForDocumentsFeatureCountTopicCount(docs, features, topics) {
+        this.documents = docs;
+        this.topicCount = topics;
+        this.featureCount = features;
+        this.documentCount = docs.length;
+
+        this.perDocumentTopics = Matrix.rowsColumnsElement(documentCount, topicCount, 0.0);
+        this.perDocumentFrequency = fillArray(0, documentCount);
+        this.perTopicFeatures = Matrix.rowsColumnsElement(topicCount, featureCount, 0.0);
+        this.perTopicFrequency = fillArray(0, topicCount);
+
+        this.topicPriors = fillArray(1.0 / topicCount, topicCount);
+        this.featurePriors = fillArray(1.0 / featureCount, featureCount);
+
+        this.perWordTopic = new Map();
+    }
+
+    topicProbabilityOverAndFeature(doc, feature) {
+        // Compute P(t | d, f) given previous topic allocation and priors.
+        // The result is a distribution, not a value!
+
+        var featurePrior, topics, docFrequency;
+
+        featurePrior = this.featurePriors[feature];
+        topics = this.perDocumentTopics.atRow(doc);
+        docFrequency = this.perDocumentFrequency[doc];
+
+        return LDMultinomial.normalized(
+            range(topicCount).map(topic => {
+                var pFeature, pTopic;
+
+                // bayesian estimates proportional to feature and topic marginals
+                // (with normalization terms, don't ask!)
+
+                pFeature = (this.perTopicFeatures.get(topic, feature)) + featurePrior;
+                pFeature = pFeature / (1.0 + (this.perTopicFrequency[topic]));
+
+                pTopic = (topics[topic]) + (this.topicPriors[topic]);
+                pTopic = pTopic / (docFrequency + ((this.topicPriors[topic]) * this.topicCount));
+
+                return pFeature * pTopic;
+            })
+        );
+    }
+
+    update() {
+        var topic;
+
+        this.documents.forEach((document, di) => {
+            document.forEach((word, wj) => {
+                var packedKey = packKeys(di, wj);
+                topic = this.perWordTopic.get(packedKey);
+                this.dissociateFeatureWithDocAndTopic(word, di, topic);
+                topic = this.topicProbabilityOverAndFeature(di, word).sample(); // TODO implement sample on LDMultinomial
+                this.associateFeatureWithDocAndTopic(word, di, topic);
+                this.perWordTopic.set(packedKey, topic);
+            });
+        });
+    }
+}
