@@ -312,7 +312,7 @@ class LDAllocator {
         // update statistics to reflect association between word, topic and document
 
         this.perDocumentTopics.set(doc, topic,
-            delta + this.perDocumentTopics.get(doc, topics)
+            delta + this.perDocumentTopics.get(doc, topic)
         );
 
         this.perTopicFeatures.set(topic, feature,
@@ -341,8 +341,8 @@ class LDAllocator {
         random = new Random();
 
         this.documents.forEach((doc, di) => {
-            doc.forEach(word, wj => {
-                topic = random.nextInt(topicCount);
+            doc.forEach((word, wj) => {
+                topic = random.nextInt(this.topicCount);
                 this.associateFeatureWithDocAndTopic(word, di, topic);
                 this.perWordTopic.set(packKeys(di, wj), topic);
             });
@@ -355,13 +355,13 @@ class LDAllocator {
         this.featureCount = features;
         this.documentCount = docs.length;
 
-        this.perDocumentTopics = Matrix.rowsColumnsElement(documentCount, topicCount, 0.0);
-        this.perDocumentFrequency = fillArray(0, documentCount);
-        this.perTopicFeatures = Matrix.rowsColumnsElement(topicCount, featureCount, 0.0);
-        this.perTopicFrequency = fillArray(0, topicCount);
+        this.perDocumentTopics = Matrix.rowsColumnsElement(this.documentCount, this.topicCount, 0.0);
+        this.perDocumentFrequency = fillArray(0, this.documentCount);
+        this.perTopicFeatures = Matrix.rowsColumnsElement(this.topicCount, this.featureCount, 0.0);
+        this.perTopicFrequency = fillArray(0, this.topicCount);
 
-        this.topicPriors = fillArray(1.0 / topicCount, topicCount);
-        this.featurePriors = fillArray(1.0 / featureCount, featureCount);
+        this.topicPriors = fillArray(1.0 / this.topicCount, this.topicCount);
+        this.featurePriors = fillArray(1.0 / this.featureCount, this.featureCount);
 
         this.perWordTopic = new Map();
     }
@@ -377,7 +377,7 @@ class LDAllocator {
         docFrequency = this.perDocumentFrequency[doc];
 
         return LDMultinomial.normalized(
-            range(topicCount).map(topic => {
+            range(this.topicCount).map(topic => {
                 var pFeature, pTopic;
 
                 // bayesian estimates proportional to feature and topic marginals
@@ -409,3 +409,15 @@ class LDAllocator {
         });
     }
 }
+
+var sixDocs = [
+    [1, 2, 3],
+    [1, 2, 2, 2],
+    [1, 1, 3],
+    [3, 4, 5],
+    [4, 5,],
+    [3, 5, 4, 3]
+];
+
+var lda = new LDAllocator();
+var model = lda.allocateIteratingFeaturesTopics(sixDocs, 10, 5, 2);
