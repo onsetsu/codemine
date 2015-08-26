@@ -568,7 +568,7 @@ var sixDocs = [
 ];
 
 var lda = new LDAllocator();
-var model = lda.allocateIteratingFeaturesTopics(sixDocs, 10, 5, 2);
+var model = lda.allocateIteratingFeaturesTopics(sixDocs, 100, 5, 2);
 
 console.log(model.featuresForTopicAt(0));
 console.log(model.featuresForTopicAt(1));
@@ -578,3 +578,338 @@ console.log(model.topicsForDocumentAt(5));
 console.log(model.documentSimilarityOfAnd(0, 1));
 console.log(model.documentSimilarityOfAnd(4, 5));
 console.log(model.documentSimilarityOfAnd(1, 5));
+
+console.log('------------ Code Mine ------------');
+
+class CMTextVisitor {
+
+}
+
+class LDLinkField {
+
+}
+
+class CMCodeTopicModel {
+    computeLinkedTopicsForIterations(numTopics, iterations) {
+        // TODO: implement
+        throw new Error('method computeLinkedTopicsForIterations not yet implemented');
+        /*
+        | lda |
+
+            lda := LDLinkedAllocator new.
+            lda linkField: linkField;
+            contextWeight: 0.3;
+            featurePriors: (self featureSpace estimateFeaturePriors).
+
+            self topicModel: (lda
+            allocate: (self methodTexts values)
+            iterating: iterations
+            features: (self featureSpace featureCount)
+            topics: numTopics).
+        ^self topicModel
+        */
+    }
+
+    computeTopicsForIterations(numTopics, iterations) {
+        var lda;
+
+        lda = new LDAllocator();
+        this.topicModel = lda.allocateIteratingFeaturesTopics(
+            this.methodTexts.values(), // TODO this returns an iterator, not an Array
+            iterations,
+            this.featureSpace.featureCount,
+            numTopics
+        );
+        return this.topicModel
+    }
+
+    extractTextFromCallGraph(aCallGraph) {
+        // Collect all textual tokens from a call graph, eliminate non-frequent tokens
+        // and construct the feature space from the rest
+
+        var frequencies, methodFeatures, dependencies, selectorMapping, docId;
+        frequencies = new Map();
+        methodFeatures = new Map();
+        dependencies = new Map();
+        selectorMapping = new Map();
+
+        docId = 0;
+
+        aCallGraph.methods.forEach(method => {
+            var textVisitor, currentSelector;
+            currentSelector = method.implementedSelector.symbol;
+            if(!selectorMapping.has(currentSelector)) {
+                selectorMapping.set(currentSelector, []);
+            }
+            selectorMapping.get(currentSelector).push(docId);
+
+            textVisitor = new CMTextVisitor();
+            textVisitor.onSelector((position, targetSelector) => {
+                dependencies.set(packKeys(docId, position), targetSelector);
+            });
+
+            textVisitor.visitNode(method.sourceTree);
+            textVisitor.literals.forEach(symbol => {
+                frequencies.set(symbol, frequencies.has(symbol) ?
+                    1 + frequencies.get(symbol) :
+                    1
+                );
+            });
+            methodFeatures.set(method, textVisitor.literals);
+            docId += 1;
+        });
+
+        methodFeatures.forEach((features, method) => {
+            var reducedFeatures;
+            reducedFeatures = features.filter(feature => frequencies.get(feature) > 2).
+            this.methodTexts.set(method, this.featureSpace.representAll(reducedFeatures));
+        });
+
+        // "Unwrap
+        // (d @ w) -> #selector
+        // and
+        // #selector -> d1, dw, ...
+        // to
+        // (d @ w) -> d1, d2, ..."
+
+        this.linkField = new LDLinkField();
+        dependencies.forEach((targetSelector, position) => {
+            if(selectorMapping.has(targetSelector)) {
+                let targetIds = selectorMapping.get(targetSelector);
+                targetIds.forEach(id => this.linkField.linkDocumentAtTo(position.x, position.y, id));
+            }
+        });
+    }
+
+    constructor() {
+        this.methodTexts = new Map();
+        this.featureSpace = new LDDocumentFeatureSpace();
+    }
+
+    sortedTopic(topic) {
+        return this.topicModel.featuresForTopicAt(topic)
+            .map((value, index) => [value, index])
+            .sort((a, b) => a[0]) - (b[0])
+            .map(pair => this.featureSpace.interpret(pair[1]));
+    }
+}
+
+class CMCallingRelation {
+    constructor() {
+        this.backwardDeps = [];
+        this.forwardDeps = [];
+        this.container = undefined;
+        this.selector = undefined;
+    }
+}
+
+class CMMethod {
+    constructor() {
+        this.callingRelations = [];
+        this.implementedSelector = undefined;
+        this.sourceTree = undefined;
+    }
+
+    newCallTo(aSelector) {
+        var call = new CMCallingRelation();
+        call.selector = aSelector;
+        call.container = this;
+        aSelector.senders.push(call);
+        this.callingRelations.push(call);
+        return call;
+    }
+}
+
+class CMSelector {
+    constructor() {
+        this.implementors = [];
+        this.senders = [];
+        this.symbol = undefined;
+    }
+
+    newImplementor(aSourceAst) {
+        var method = new CMMethod();
+        method.implementedSelector = this;
+        method.sourceTree = aSourceAst;
+        this.implementors.push(method);
+        return method;
+    }
+
+    static named(aSymbol) {
+        var selector = new CMSelector();
+        selector.symbol = aSymbol;
+        return selector;
+    }
+}
+
+class CMCallGraph {
+    addMethod(aCMMethod) {
+        this.methods.push(aCMMethod);
+    }
+
+    constructor() {
+        this.selectorsMap = new Map();
+        this.methods = [];
+    }
+
+    selectorFor(aSymbol) {
+        if(!this.selectorsMap.has(aSymbol)) {
+            this.selectorsMap.set(aSymbol, CMSelector.named(aSymbol));
+        }
+        return this.selectorsMap.get(aSymbol);
+    }
+
+    static fromCategory(aString) {
+        // Compute call graph from categories beginning with aString
+
+        var callGraph;
+
+        callGraph = new CMCallGraph();
+        (CMCallGraphBuilder.forGraph(callGraph)).scanCategoryPrefix(aString); // TODO: this is asynchronous! Use Promises
+        return callGraph;
+    }
+
+    static fromCategoryExcluding(aString, aBlock) {
+        // Compute call graph from categories beginning with aString
+
+        var callGraph;
+
+        callGraph = new CMCallGraph();
+        (CMCallGraphBuilder.forGraph(callGraph)).scanCategoryPrefixExcluding(aString, aBlock);
+        return callGraph;
+    }
+}
+
+class CMArgumentDependency {}
+class CMSelfDependency {}
+class RBParser {
+    parseMethod() {}
+}
+
+class CMCallGraphBuilder {
+    acceptMessageNode(aMessageNode) {
+        var selector = this.callGraph.selectorFor(aMessageNode.selector); // selector is the Smalltalk-specific term
+        this.currentStatement = (this.currentMethod.newCallTo(selector));
+        super.acceptMessageNode(aMessageNode);
+    }
+
+    acceptMethodNode(aMethodNode) {
+        var selector;
+        selector = self.callGraph.selectorFor(aMethodNode.selector.asSymbol()); // TODO: Smalltalk-specific methods
+        this.currentMethod = selector.newImplementor(aMethodNode);
+        this.definitions = new Map();
+        this.definitions.set('self', this.currentSelf);
+
+        aMethodNode.argumentNames.forEach(arg =>
+            this.definitions.set(arg, CMArgumentDependency.named(arg))
+        );
+
+        this.callGraph.methods.push(this.currentMethod);
+        super.acceptMethodNode(aMethodNode);
+    }
+
+    constructor() {
+        this.definitions = new Map();
+
+        this.currentMethod = undefined;
+        this.callGraph = undefined;
+        this.currentSelf = undefined;
+        this.controlFlow = undefined;
+        this.currentStatement = undefined;
+    }
+
+    scanCategoryPrefix(aString) {
+        return this.scanCategoryPrefixExcluding(aString, cls => false);
+    }
+
+    scanCategoryPrefixExcluding(aString, aBlock) {
+        Object.allSubclasses
+            .filter(cls => {
+                var cat = cls.category;
+                if(!cat) {
+                    return false;
+                } else {
+                    return cat.beginsWith(aString);
+                }
+            })
+            .filter(cls => !aBlock.call(undefined, cls))
+            .forEach(cls => this.scanClass(cls));
+    }
+
+    scanClass(aClass) {
+        this.currentSelf = CMSelfDependency.newForClass(aClass);
+
+        aClass.methodDict.forEach(method => {
+            var node = RBParser.parseMethod(method.getSource().asString());
+            this.visitNode(node);
+        });
+    }
+
+    static forGraph(aCallGraph) {
+        var callGraphBuilder = new CMCallGraphBuilder();
+        callGraphBuilder.callGraph = aCallGraph;
+        return callGraphBuilder;
+    }
+}
+
+console.log('------------ Glob ------------');
+
+var glob = require('glob');
+var fs = require('fs');
+
+// options is optional
+function traverseDir(pattern) {
+    return new Promise(function(resolve, reject) {
+        glob(pattern, function (err, files) {
+            // files is an array of filenames.
+            // If the `nonull` option is set, and nothing
+            // was found, then files is ["**/*.js"]
+            // er is an error object or null.
+            if(err) {
+                reject(err);
+            } else {
+                resolve(files);
+            }
+        });
+    });
+}
+
+function readFiles(files) {
+    return Promise.all(files.map(fileName => new Promise(function(resolve, reject) {
+        fs.readFile(fileName, { encoding: 'utf8' }, function (err, data) {
+            if(err) {
+                reject(err);
+            } else {
+                resolve({
+                    fileName: fileName,
+                    sourceString: data
+                });
+            }
+        });
+    })));
+}
+
+traverseDir('sample/**/*.js')
+    .then(readFiles)
+    .then(datas => datas.map(data => console.log(data.fileName)))
+    .catch(error => console.log(error));
+
+
+/*
+var cg, cgb, tm, lda;
+cg = new CMCallGraph();
+cgb = CMCallGraphBuilder.forGraph(cg);
+cgb.scanCategoryPrefix: 'Vivide' excluding: [:class | class name
+beginsWith: 'ViQueryArchive'];
+cgb.scanCategoryPrefix('Widget');
+
+console.log(cg.methods.length);
+
+tm = new CMCodeTopicModel();
+tm.extractTextFromCallGraph(cg);
+
+lda = tm.computeLinkedTopicsForIterations(10, 30);
+
+timesDo(10, i => console.log(tm.sortedTopic(i).slice(0, 30)));
+*/
+
