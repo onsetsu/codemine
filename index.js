@@ -661,7 +661,7 @@ class CMCodeTopicModel {
 
         methodFeatures.forEach((features, method) => {
             var reducedFeatures;
-            reducedFeatures = features.filter(feature => frequencies.get(feature) > 2).
+            reducedFeatures = features.filter(feature => frequencies.get(feature) > 2);
             this.methodTexts.set(method, this.featureSpace.representAll(reducedFeatures));
         });
 
@@ -914,27 +914,78 @@ function attachAsts(files) {
     });
 }
 
-var logVisitor = {
-    enter: function(node, parent) {
+class JSTopicModel {
+    constructor() {
+        this.methodTexts = new Map();
+        this.featureSpace = new LDDocumentFeatureSpace();
+    }
+}
+
+function extractTextToTopicModel(modules) {
+    var tm = new JSTopicModel();
+
+    var frequencies, methodFeatures, docId;
+    frequencies = new Map();
+    methodFeatures = new Map();
+
+    docId = 0;
+
+    modules.forEach(method => {
+        var textVisitor = new ExtractTextVisitor();
+
+        estools.traverse(method.ast, textVisitor);
+        textVisitor.literals.forEach(symbol => {
+            frequencies.set(symbol, frequencies.has(symbol) ?
+                1 + frequencies.get(symbol) : 1
+            );
+        });
+        methodFeatures.set(method, textVisitor.literals);
+        docId += 1;
+    });
+
+    methodFeatures.forEach((features, method) => {
+        var reducedFeatures = features.filter(feature => frequencies.get(feature) > 2);
+        tm.methodTexts.set(method, tm.featureSpace.representAll(reducedFeatures));
+    });
+
+    console.log('Number of documents', docId);
+    console.log(tm);
+
+    return tm;
+}
+
+class ExtractTextVisitor {
+    constructor() {
+        this.literals = [];
+    }
+
+    enter(node, parent) {
         switch(node.type) {
             case 'Literal':
-                console.log(node.type, node.value);
+                this.literals.push(node.value);
                 break;
             case 'Identifier':
-                console.log(node.type, node.name);
+                this.literals.push(node.name);
                 break;
             default:
-                console.log(node.type);
                 break;
         }
     }
 };
 
+function computeTopicsForIterations() {}
+function showAllTopics() {}
 
 traverseDir('sample/**/*.js')
     .then(readFiles)
     .then(attachAsts)
-    .then(datas => datas.map(data => console.log(data.fileName)))
+    .then(modules => modules.map(module => {
+        console.log(module.fileName);
+        return module;
+    }))
+    .then(extractTextToTopicModel)
+    .then(computeTopicsForIterations)
+    .then(showAllTopics)
     .catch(error => console.log(error));
-//estools.traverse(ast, logVisitor);
+
 
