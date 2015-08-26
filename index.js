@@ -195,7 +195,7 @@ var gulpApplyFn = require('./gulp-applyfn');
 gulp.task('codemine', function () {
     return gulp.src('sample/bloob-engine/**/*.js')
         .pipe(gulpApplyFn(function(file, sourceCode) {
-            var ast = esprima.parse(sourceCode);
+            //var ast = esprima.parse(sourceCode);
             //console.log(file.path);
             //estools.traverse(ast, logVisitor);
         }));
@@ -852,7 +852,24 @@ class CMCallGraphBuilder {
     }
 }
 
-console.log('------------ Glob ------------');
+var cg, cgb, tm, lda;
+cg = new CMCallGraph();
+cgb = CMCallGraphBuilder.forGraph(cg);
+/*
+cgb.scanCategoryPrefixExcluding('Vivide', cls => cls.name.beginsWith('ViQueryArchive'));
+cgb.scanCategoryPrefix('Widget');
+
+console.log(cg.methods.length);
+
+tm = new CMCodeTopicModel();
+tm.extractTextFromCallGraph(cg);
+
+lda = tm.computeLinkedTopicsForIterations(10, 30);
+
+timesDo(10, i => console.log(tm.sortedTopic(i).slice(0, 30)));
+*/
+
+console.log('------------ Glob Mine ------------');
 
 var glob = require('glob');
 var fs = require('fs');
@@ -889,27 +906,35 @@ function readFiles(files) {
     })));
 }
 
+function attachAsts(files) {
+    return files.map(file => {
+        var ast = esprima.parse(file.sourceString);
+        file.ast = ast;
+        return file;
+    });
+}
+
+var logVisitor = {
+    enter: function(node, parent) {
+        switch(node.type) {
+            case 'Literal':
+                console.log(node.type, node.value);
+                break;
+            case 'Identifier':
+                console.log(node.type, node.name);
+                break;
+            default:
+                console.log(node.type);
+                break;
+        }
+    }
+};
+
+
 traverseDir('sample/**/*.js')
     .then(readFiles)
+    .then(attachAsts)
     .then(datas => datas.map(data => console.log(data.fileName)))
     .catch(error => console.log(error));
-
-
-/*
-var cg, cgb, tm, lda;
-cg = new CMCallGraph();
-cgb = CMCallGraphBuilder.forGraph(cg);
-cgb.scanCategoryPrefix: 'Vivide' excluding: [:class | class name
-beginsWith: 'ViQueryArchive'];
-cgb.scanCategoryPrefix('Widget');
-
-console.log(cg.methods.length);
-
-tm = new CMCodeTopicModel();
-tm.extractTextFromCallGraph(cg);
-
-lda = tm.computeLinkedTopicsForIterations(10, 30);
-
-timesDo(10, i => console.log(tm.sortedTopic(i).slice(0, 30)));
-*/
+//estools.traverse(ast, logVisitor);
 
