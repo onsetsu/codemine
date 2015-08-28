@@ -131,7 +131,7 @@ class LDDocumentFeatureSpace extends LDFeatureSpace {
 
     constructor() {
         super();
-        this.documentCount = 0.
+        this.documentCount = 0;
         this.documentFeatureCounts = new Map();
         this.perDocumentSize = [];
         this.perFeatureDocuments = [];
@@ -261,6 +261,7 @@ class Matrix {
     }
 
     get(row, column) {
+        //console.log(row, column);
         return this.contents[row][column];
     }
 
@@ -423,6 +424,7 @@ class LDModel {
     }
 
     initializeTopicsAndDocumentsAndPriors(topics, documents, priors) {
+        //console.log(topics);
         this.perTopicFeatures = topics;
         this.perDocumentTopics = documents;
         this.topicPriors = priors;
@@ -442,30 +444,43 @@ class LDModel {
 class LDAllocator {
     allocateIteratingFeaturesTopics(docs, numIterations, numFeatures, numTopics) {
         // Train model with given documents for given number of iterations.
-
+        //console.log('LDA THERE');
         this.setupForDocumentsFeatureCountTopicCount(docs, numFeatures, numTopics);
         this.randomize();
-        timesDo(numIterations, this.update.bind(this));
+        for(var i = 0; i < numIterations; i++) {
+            this.update();
+        }
+        //console.log('LDA THERE AT END');
         return this.model();
     }
 
     associateFeatureWithDocAndTopic(feature, doc, topic) {
+        //console.log('LDAllocator associateFeatureWithDocAndTopic');
         this.associateFeatureWithDocAndTopicBy(feature, doc, topic, 1);
+        //console.log('LDAllocator associateFeatureWithDocAndTopic2');
     }
 
     associateFeatureWithDocAndTopicBy(feature, doc, topic, delta) {
         // update statistics to reflect association between word, topic and document
-
+        //console.log('LDAllocator associateFeatureWithDocAndTopicBy1');
+        //console.log('LDAllocator associateFeatureWithDocAndTopicBy1', feature, doc, topic, delta);
+        if(topic === -1) {
+            topic = -1;
+        }
         this.perDocumentTopics.set(doc, topic,
             delta + this.perDocumentTopics.get(doc, topic)
         );
-
+        //console.log('LDAllocator associateFeatureWithDocAndTopicBy2', feature, doc, topic, delta);
+        if(topic === -1) { throw new Error('undefined topic')}
         this.perTopicFeatures.set(topic, feature,
             delta + this.perTopicFeatures.get(topic, feature)
         );
+        //console.log('LDAllocator associateFeatureWithDocAndTopicBy3');
 
         this.perDocumentFrequency[doc] += delta;
+        //console.log('LDAllocator associateFeatureWithDocAndTopicBy4');
         this.perTopicFrequency[topic] += delta;
+        //console.log('LDAllocator associateFeatureWithDocAndTopicBy5');
     }
 
     dissociateFeatureWithDocAndTopic(feature, doc, topic) {
@@ -495,6 +510,7 @@ class LDAllocator {
                 this.perWordTopic.set(packKeys(di, wj), topic);
             });
         });
+        console.log('PAST RANDOMIZE');
     }
 
     setupForDocumentsFeatureCountTopicCount(docs, features, topics) {
@@ -505,6 +521,7 @@ class LDAllocator {
 
         this.perDocumentTopics = Matrix.rowsColumnsElement(this.documentCount, this.topicCount, 0.0);
         this.perDocumentFrequency = fillArray(0, this.documentCount);
+        console.log(this.topicCount, this.featureCount);
         this.perTopicFeatures = Matrix.rowsColumnsElement(this.topicCount, this.featureCount, 0.0);
         this.perTopicFrequency = fillArray(0, this.topicCount);
 
@@ -544,6 +561,7 @@ class LDAllocator {
 
     update() {
         var topic;
+        //console.log('LDA UPDATE THERE');
 
         this.documents.forEach((document, di) => {
             document.forEach((word, wj) => {
@@ -551,13 +569,18 @@ class LDAllocator {
                 topic = this.perWordTopic.get(packedKey);
                 this.dissociateFeatureWithDocAndTopic(word, di, topic);
                 topic = this.topicProbabilityOverAndFeature(di, word).sample();
+                if(topic === -1) {
+                    topic = this.topicProbabilityOverAndFeature(di, word).sample();
+                }
                 this.associateFeatureWithDocAndTopic(word, di, topic);
                 this.perWordTopic.set(packedKey, topic);
             });
         });
+        //console.log('LDA UPDATE2 THERE');
     }
 }
 
+/*
 var sixDocs = [
     [0, 1, 2],
     [0, 1, 1, 1],
@@ -578,295 +601,6 @@ console.log(model.topicsForDocumentAt(5));
 console.log(model.documentSimilarityOfAnd(0, 1));
 console.log(model.documentSimilarityOfAnd(4, 5));
 console.log(model.documentSimilarityOfAnd(1, 5));
-
-console.log('------------ Code Mine ------------');
-
-class CMTextVisitor {
-
-}
-
-class LDLinkField {
-
-}
-
-class CMCodeTopicModel {
-    computeLinkedTopicsForIterations(numTopics, iterations) {
-        // TODO: implement
-        throw new Error('method computeLinkedTopicsForIterations not yet implemented');
-        /*
-        | lda |
-
-            lda := LDLinkedAllocator new.
-            lda linkField: linkField;
-            contextWeight: 0.3;
-            featurePriors: (self featureSpace estimateFeaturePriors).
-
-            self topicModel: (lda
-            allocate: (self methodTexts values)
-            iterating: iterations
-            features: (self featureSpace featureCount)
-            topics: numTopics).
-        ^self topicModel
-        */
-    }
-
-    computeTopicsForIterations(numTopics, iterations) {
-        var lda;
-
-        lda = new LDAllocator();
-        this.topicModel = lda.allocateIteratingFeaturesTopics(
-            this.methodTexts.values(), // TODO this returns an iterator, not an Array
-            iterations,
-            this.featureSpace.featureCount,
-            numTopics
-        );
-        return this.topicModel
-    }
-
-    extractTextFromCallGraph(aCallGraph) {
-        // Collect all textual tokens from a call graph, eliminate non-frequent tokens
-        // and construct the feature space from the rest
-
-        var frequencies, methodFeatures, dependencies, selectorMapping, docId;
-        frequencies = new Map();
-        methodFeatures = new Map();
-        dependencies = new Map();
-        selectorMapping = new Map();
-
-        docId = 0;
-
-        aCallGraph.methods.forEach(method => {
-            var textVisitor, currentSelector;
-            currentSelector = method.implementedSelector.symbol;
-            if(!selectorMapping.has(currentSelector)) {
-                selectorMapping.set(currentSelector, []);
-            }
-            selectorMapping.get(currentSelector).push(docId);
-
-            textVisitor = new CMTextVisitor();
-            textVisitor.onSelector((position, targetSelector) => {
-                dependencies.set(packKeys(docId, position), targetSelector);
-            });
-
-            textVisitor.visitNode(method.sourceTree);
-            textVisitor.literals.forEach(symbol => {
-                frequencies.set(symbol, frequencies.has(symbol) ?
-                    1 + frequencies.get(symbol) :
-                    1
-                );
-            });
-            methodFeatures.set(method, textVisitor.literals);
-            docId += 1;
-        });
-
-        methodFeatures.forEach((features, method) => {
-            var reducedFeatures;
-            reducedFeatures = features.filter(feature => frequencies.get(feature) > 2);
-            this.methodTexts.set(method, this.featureSpace.representAll(reducedFeatures));
-        });
-
-        // "Unwrap
-        // (d @ w) -> #selector
-        // and
-        // #selector -> d1, dw, ...
-        // to
-        // (d @ w) -> d1, d2, ..."
-
-        this.linkField = new LDLinkField();
-        dependencies.forEach((targetSelector, position) => {
-            if(selectorMapping.has(targetSelector)) {
-                let targetIds = selectorMapping.get(targetSelector);
-                targetIds.forEach(id => this.linkField.linkDocumentAtTo(position.x, position.y, id));
-            }
-        });
-    }
-
-    constructor() {
-        this.methodTexts = new Map();
-        this.featureSpace = new LDDocumentFeatureSpace();
-    }
-
-    sortedTopic(topic) {
-        return this.topicModel.featuresForTopicAt(topic)
-            .map((value, index) => [value, index])
-            .sort((a, b) => a[0]) - (b[0])
-            .map(pair => this.featureSpace.interpret(pair[1]));
-    }
-}
-
-class CMCallingRelation {
-    constructor() {
-        this.backwardDeps = [];
-        this.forwardDeps = [];
-        this.container = undefined;
-        this.selector = undefined;
-    }
-}
-
-class CMMethod {
-    constructor() {
-        this.callingRelations = [];
-        this.implementedSelector = undefined;
-        this.sourceTree = undefined;
-    }
-
-    newCallTo(aSelector) {
-        var call = new CMCallingRelation();
-        call.selector = aSelector;
-        call.container = this;
-        aSelector.senders.push(call);
-        this.callingRelations.push(call);
-        return call;
-    }
-}
-
-class CMSelector {
-    constructor() {
-        this.implementors = [];
-        this.senders = [];
-        this.symbol = undefined;
-    }
-
-    newImplementor(aSourceAst) {
-        var method = new CMMethod();
-        method.implementedSelector = this;
-        method.sourceTree = aSourceAst;
-        this.implementors.push(method);
-        return method;
-    }
-
-    static named(aSymbol) {
-        var selector = new CMSelector();
-        selector.symbol = aSymbol;
-        return selector;
-    }
-}
-
-class CMCallGraph {
-    addMethod(aCMMethod) {
-        this.methods.push(aCMMethod);
-    }
-
-    constructor() {
-        this.selectorsMap = new Map();
-        this.methods = [];
-    }
-
-    selectorFor(aSymbol) {
-        if(!this.selectorsMap.has(aSymbol)) {
-            this.selectorsMap.set(aSymbol, CMSelector.named(aSymbol));
-        }
-        return this.selectorsMap.get(aSymbol);
-    }
-
-    static fromCategory(aString) {
-        // Compute call graph from categories beginning with aString
-
-        var callGraph;
-
-        callGraph = new CMCallGraph();
-        (CMCallGraphBuilder.forGraph(callGraph)).scanCategoryPrefix(aString); // TODO: this is asynchronous! Use Promises
-        return callGraph;
-    }
-
-    static fromCategoryExcluding(aString, aBlock) {
-        // Compute call graph from categories beginning with aString
-
-        var callGraph;
-
-        callGraph = new CMCallGraph();
-        (CMCallGraphBuilder.forGraph(callGraph)).scanCategoryPrefixExcluding(aString, aBlock);
-        return callGraph;
-    }
-}
-
-class CMArgumentDependency {}
-class CMSelfDependency {}
-class RBParser {
-    parseMethod() {}
-}
-
-class CMCallGraphBuilder {
-    acceptMessageNode(aMessageNode) {
-        var selector = this.callGraph.selectorFor(aMessageNode.selector); // selector is the Smalltalk-specific term
-        this.currentStatement = (this.currentMethod.newCallTo(selector));
-        super.acceptMessageNode(aMessageNode);
-    }
-
-    acceptMethodNode(aMethodNode) {
-        var selector;
-        selector = self.callGraph.selectorFor(aMethodNode.selector.asSymbol()); // TODO: Smalltalk-specific methods
-        this.currentMethod = selector.newImplementor(aMethodNode);
-        this.definitions = new Map();
-        this.definitions.set('self', this.currentSelf);
-
-        aMethodNode.argumentNames.forEach(arg =>
-            this.definitions.set(arg, CMArgumentDependency.named(arg))
-        );
-
-        this.callGraph.methods.push(this.currentMethod);
-        super.acceptMethodNode(aMethodNode);
-    }
-
-    constructor() {
-        this.definitions = new Map();
-
-        this.currentMethod = undefined;
-        this.callGraph = undefined;
-        this.currentSelf = undefined;
-        this.controlFlow = undefined;
-        this.currentStatement = undefined;
-    }
-
-    scanCategoryPrefix(aString) {
-        return this.scanCategoryPrefixExcluding(aString, cls => false);
-    }
-
-    scanCategoryPrefixExcluding(aString, aBlock) {
-        Object.allSubclasses
-            .filter(cls => {
-                var cat = cls.category;
-                if(!cat) {
-                    return false;
-                } else {
-                    return cat.beginsWith(aString);
-                }
-            })
-            .filter(cls => !aBlock.call(undefined, cls))
-            .forEach(cls => this.scanClass(cls));
-    }
-
-    scanClass(aClass) {
-        this.currentSelf = CMSelfDependency.newForClass(aClass);
-
-        aClass.methodDict.forEach(method => {
-            var node = RBParser.parseMethod(method.getSource().asString());
-            this.visitNode(node);
-        });
-    }
-
-    static forGraph(aCallGraph) {
-        var callGraphBuilder = new CMCallGraphBuilder();
-        callGraphBuilder.callGraph = aCallGraph;
-        return callGraphBuilder;
-    }
-}
-
-var cg, cgb, tm, lda;
-cg = new CMCallGraph();
-cgb = CMCallGraphBuilder.forGraph(cg);
-/*
-cgb.scanCategoryPrefixExcluding('Vivide', cls => cls.name.beginsWith('ViQueryArchive'));
-cgb.scanCategoryPrefix('Widget');
-
-console.log(cg.methods.length);
-
-tm = new CMCodeTopicModel();
-tm.extractTextFromCallGraph(cg);
-
-lda = tm.computeLinkedTopicsForIterations(10, 30);
-
-timesDo(10, i => console.log(tm.sortedTopic(i).slice(0, 30)));
 */
 
 console.log('------------ Glob Mine ------------');
@@ -919,6 +653,14 @@ class JSTopicModel {
         this.methodTexts = new Map();
         this.featureSpace = new LDDocumentFeatureSpace();
     }
+
+    sortedTopic(topic) {
+        return this.topicModel.featuresForTopicAt(topic)
+                .map((value, index) => [value, index])
+                .sort((a, b) => b[0] - (a[0]))
+                //.map(pair => this.featureSpace.interpret(pair[1]));
+                .map(pair => [pair[0], this.featureSpace.interpret(pair[1])]);
+    }
 }
 
 function extractTextToTopicModel(modules) {
@@ -948,9 +690,6 @@ function extractTextToTopicModel(modules) {
         tm.methodTexts.set(method, tm.featureSpace.representAll(reducedFeatures));
     });
 
-    console.log('Number of documents', docId);
-    console.log(tm);
-
     return tm;
 }
 
@@ -971,21 +710,46 @@ class ExtractTextVisitor {
                 break;
         }
     }
-};
+}
 
-function computeTopicsForIterations() {}
-function showAllTopics() {}
+function computeTopicsForIterations(tm) {
+    var lda = new LDAllocator();
+    var methodFeatures = [];
+    tm.methodTexts.forEach(v => {
+        return methodFeatures.push(v)
+    });
+    var iterations = 30; // TODO, HACK: hard-coded value
+    var numTopics = 30; // TODO, HACK: hard-coded value
 
-traverseDir('sample/**/*.js')
+    tm.topicModel = lda.allocateIteratingFeaturesTopics(
+        methodFeatures,
+        iterations,
+        tm.featureSpace.featureCount() + 1,
+        numTopics
+    );
+
+    return tm;
+}
+
+function showAllTopics(tm) {
+    //console.log(tm);
+    for(var i = 0; i < 30; i++) {
+        console.log(
+            tm.sortedTopic(i).slice(0, 10)
+        );
+    }
+}
+
+traverseDir('sample/bloob/**/*.js')
     .then(readFiles)
     .then(attachAsts)
     .then(modules => modules.map(module => {
-        console.log(module.fileName);
+        //console.log(module.fileName);
         return module;
     }))
     .then(extractTextToTopicModel)
     .then(computeTopicsForIterations)
     .then(showAllTopics)
-    .catch(error => console.log(error));
-
-
+    .then(() => { console.log('END'); })
+    .catch(error => { throw error; })
+;
