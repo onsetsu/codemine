@@ -611,8 +611,17 @@ var fs = require('fs');
 // https://www.npmjs.com/package/github-download
 var ghdownload = require('github-download');
 
-function traverseRepo(ghDownloadParams, globPattern) {
-    console.log('DOWNLOAD REPOSITORY');
+var codemine = {
+    /**
+     * @returns Promise<baseDirPath>
+     */
+    start: function codemineStart(loaderTask) {
+
+    }
+};
+
+function githuRepo(ghDownloadParams) {
+    console.log('DOWNLOAD REPOSITORY FROM GITHUB');
     return new Promise(function(resolve, reject) {
         var subRepo = 'sample/' + Date.now() + '/';
 
@@ -621,27 +630,32 @@ function traverseRepo(ghDownloadParams, globPattern) {
                 reject(err)
             })
             .on('end', function() {
-                resolve(subRepo + globPattern);
+                console.log(subRepo);
+
+                resolve(subRepo);
             });
     });
 }
 
-// options is optional
-function traverseDir(pattern) {
-    console.log('APPLY PATTERN', pattern);
-    return new Promise(function(resolve, reject) {
-        glob(pattern, function (err, files) {
-            // files is an array of filenames.
-            // If the `nonull` option is set, and nothing
-            // was found, then files is ["**/*.js"]
-            // er is an error object or null.
-            if(err) {
-                reject(err);
-            } else {
-                resolve(files);
-            }
+function traverseDir(globPattern) {
+    return function innerTraverseDir(basePattern) {
+        var pattern = basePattern + globPattern;
+        console.log('APPLY PATTERN', pattern);
+        return new Promise(function(resolve, reject) {
+            // options is optional
+            glob(pattern, function (err, files) {
+                // files is an array of filenames.
+                // If the `nonull` option is set, and nothing
+                // was found, then files is ["**/*.js"]
+                // er is an error object or null.
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(files);
+                }
+            });
         });
-    });
+    }
 }
 
 function readFiles(files) {
@@ -759,8 +773,8 @@ function showAllTopics(tm) {
     }
 }
 
-traverseRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'}, 'lib/engine/**/*.js')
-    .then(traverseDir)
+githuRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'})
+    .then(traverseDir('lib/engine/**/*.js'))
     .then(readFiles)
     .then(attachAsts)
     .then(modules => modules.map(module => {
