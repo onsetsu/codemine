@@ -44,6 +44,7 @@
   "dependencies": {
     "esprima": "^2.5.0",
     "estools": "^1.0.3",
+    "github-download": "^0.4.0",
     "glob": "^5.0.14",
     "gulp": "^3.9.0",
     "gulp-util": "^3.0.6",
