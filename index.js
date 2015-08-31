@@ -608,8 +608,27 @@ console.log('------------ Glob Mine ------------');
 var glob = require('glob');
 var fs = require('fs');
 
+// https://www.npmjs.com/package/github-download
+var ghdownload = require('github-download');
+
+function traverseRepo(ghDownloadParams, globPattern) {
+    console.log('DOWNLOAD REPOSITORY');
+    return new Promise(function(resolve, reject) {
+        var subRepo = 'sample/' + Date.now() + '/';
+
+        ghdownload(ghDownloadParams, process.cwd() + '/' + subRepo)
+            .on('error', function(err) {
+                reject(err)
+            })
+            .on('end', function() {
+                resolve(subRepo + globPattern);
+            });
+    });
+}
+
 // options is optional
 function traverseDir(pattern) {
+    console.log('APPLY PATTERN', pattern);
     return new Promise(function(resolve, reject) {
         glob(pattern, function (err, files) {
             // files is an array of filenames.
@@ -740,16 +759,18 @@ function showAllTopics(tm) {
     }
 }
 
-traverseDir('sample/bloob/**/*.js')
+traverseRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'}, 'lib/engine/**/*.js')
+    .then(traverseDir)
     .then(readFiles)
     .then(attachAsts)
     .then(modules => modules.map(module => {
-        //console.log(module.fileName);
+        console.log(module.fileName);
         return module;
     }))
     .then(extractTextToTopicModel)
     .then(computeTopicsForIterations)
-    .then(showAllTopics)
+    //.then(showAllTopics)
     .then(() => { console.log('END'); })
     .catch(error => { throw error; })
 ;
+
