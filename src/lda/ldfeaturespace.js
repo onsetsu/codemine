@@ -25,13 +25,13 @@ class LDFeatureSpace {
     }
 
     featureCount() {
-        return this.maxId;
+        return this._numFeatures;
     }
 
     constructor() {
         this.featureIdMap = new Map();
         this.idFeatureMap = new Map();
-        this.maxId = -1;
+        this._numFeatures = 0;
     }
 
     interpret(aFeatureId) {
@@ -44,10 +44,10 @@ class LDFeatureSpace {
 
     represent(aFeature) {
         if (!this.featureIdMap.has(aFeature)) {
-            this.maxId++;
-            this.idFeatureMap.set(this.maxId, aFeature);
+            this.idFeatureMap.set(this._numFeatures, aFeature);
             this.addNewFeature();
-            this.featureIdMap.set(aFeature, this.maxId);
+            this.featureIdMap.set(aFeature, this._numFeatures);
+            this._numFeatures++;
         }
         return this.featureIdMap.get(aFeature);
     }

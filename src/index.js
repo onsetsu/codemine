@@ -1,92 +1,9 @@
 "use strict";
 
-import LDFeatureSpace from './lda/ldfeaturespace';
+import LDDocumentFeatureSpace from './lda/lddocumentfeaturespace';
 var utils = require('./utils'),
     packKeys = utils.packKeys,
     sumItems = utils.sumItems;
-
-class LDDocumentFeatureSpace extends LDFeatureSpace {
-    TfIdfIn(aFeatureId, aDocumentId) {
-        return (this.frequencyOfIn(aFeatureId, aDocumentId))
-            * ((this.documentCount / (this.perFeatureDocuments[aFeatureId]))); // .log() ???
-    }
-
-    addNewFeature() {
-        super.addNewFeature();
-        this.perFeatureDocuments.push(0);
-        this.perFeatureFrequency.push(0);
-    }
-
-    associateFeatureWith(aFeatureId, aDocumentId) {
-        var packedKey = packKeys(aDocumentId, aFeatureId);
-
-        if(!this.documentFeatureCounts.has(packedKey)) {
-            this.documentFeatureCounts.set(packedKey, 0);
-        }
-
-        var count = this.documentFeatureCounts.get(packedKey);
-        this.documentFeatureCounts.set(packedKey, 1 + count);
-    }
-
-    documentProportionOf(aFeatureId) {
-        return (this.perFeatureFrequency[aFeatureId]) / (this.documentCount);
-    }
-
-    estimateFeaturePriors() {
-        var sum = sumItems(this.perFeatureFrequency);
-
-        return this.perFeatureFrequency.map(freq => freq / sum);
-    }
-
-    frequencyOfIn(aFeature, aDocument) {
-        var packedKey = packKeys(aDocument, aFeature);
-
-        if(!this.documentFeatureCounts.has(packedKey)) {
-            this.documentFeatureCounts.set(packedKey, 0);
-        }
-
-        return this.documentFeatureCounts.get(packedKey);
-    }
-
-    constructor() {
-        super();
-        this.documentCount = 0;
-        this.documentFeatureCounts = new Map();
-        this.perDocumentSize = [];
-        this.perFeatureDocuments = [];
-        this.perFeatureFrequency = [];
-    }
-
-    represent(aFeature) {
-        var id = super.represent(aFeature);
-        this.perFeatureFrequency[id] += 1;
-        return id;
-    }
-
-    representAll(aCollection) {
-        var doc, uniqueFeatures, featureVector;
-
-        doc = this.documentCount + 1;
-        this.documentCount = doc;
-
-        uniqueFeatures = new Set();
-
-        featureVector = aCollection.map(each => {
-            let id = this.represent(each);
-            this.associateFeatureWith(id, doc);
-            uniqueFeatures.add(id);
-            return id;
-        });
-
-        uniqueFeatures.forEach(id => {
-            this.perFeatureDocuments[id] += 1;
-        });
-
-        this.perDocumentSize.push(aCollection.length);
-        return featureVector;
-    }
-
-}
 
 var esprima = require('esprima');
 var estools = require('estools');
@@ -122,18 +39,6 @@ gulp.task('codemine', function () {
 
 gulp.start('codemine');
 
-console.log('------------ Document Feature Space ------------');
-
-var space = new LDDocumentFeatureSpace();
-console.log(space);
-console.log(space.representAll(['foo', 'bar', 'blub']));
-console.log(space.representAll(['bar', 'bar', 'blub', 'baz']));
-// show mapping of features to ids
-space.featureIdMap.forEach((value, key) => console.log(key, '>', value));
-//space.idFeatureMap.forEach((value, key) => console.log(key, '>', value));
-// show entries in document-word matrix
-//space.documentFeatureCounts.forEach((value, key) => console.log(key, value));
-console.log(space);
 
 console.log('------------ LDA ------------');
 
@@ -686,7 +591,7 @@ function computeTopicsForIterations(numTopics, iterations) {
         tm.topicModel = lda.allocateIteratingFeaturesTopics(
             methodFeatures,
             iterations,
-            tm.featureSpace.featureCount() + 1,
+            tm.featureSpace.featureCount(),
             numTopics
         );
 
