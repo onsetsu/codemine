@@ -1,90 +1,9 @@
 "use strict";
 
-/*
-This class helps to transform arbitrary hashable features (e.g. words or
-collections of words) into natural numbers. The transformation is
-required, as LDAllocator only accepts integer features.
-
-    Example:
-
-space := LDFeatureSpace new.
-    space representAll: #(a b c 100).
-gives #(1 2 3 4)
-space representAll: #(a c d).
-subsequently gives  #(1 3 5) because a and c are already known as
-feature #1 and #3, c is inserted as new feature #5.
-
-The space needs to be retained for later interpretation of encoded results:
-
-    space interpret: 2
-gives #b
-space interpretAll: #(5 3 2 1)
-gives #(#d #c #b #a)
-*/
-class LDFeatureSpace {
-    addNewFeature() {
-        // Hook for subclasses to reserve storage for new feature
-    }
-
-    featureCount() {
-        return this.maxId;
-    }
-
-    constructor() {
-        this.featureIdMap = new Map();
-        this.idFeatureMap = new Map();
-        this.maxId = -1;
-    }
-
-    interpret(aFeatureId) {
-        return this.idFeatureMap.get(aFeatureId);
-    }
-
-    interpretAll(aCollection) {
-        return aCollection.map(each => this.interpret(each));
-    }
-
-    represent(aFeature) {
-        if (!this.featureIdMap.has(aFeature)) {
-            this.maxId++;
-            this.idFeatureMap.set(this.maxId, aFeature);
-            this.addNewFeature();
-            this.featureIdMap.set(aFeature, this.maxId);
-        }
-        return this.featureIdMap.get(aFeature);
-    }
-
-    representAll(aCollection) {
-        return aCollection.map(each => this.represent(each));
-    }
-}
-
-// utility; transforms two keys into a single one
-var packKeys = (function() {
-    var storage = new Map();
-
-    return function twoToOne(keyA, keyB) {
-        if (!storage.has(keyA)) {
-            storage.set(keyA, new Map());
-        }
-        var stor2 = storage.get(keyA);
-        if (!stor2.has(keyB)) {
-            stor2.set(keyB, {
-                keyA: keyA,
-                keyB: keyB
-            });
-        }
-        return stor2.get(keyB);
-    }
-})();
-
-function sumItems(arr) {
-    return arr.reduce((acc, value) => acc + value, 0);
-}
-
-// testing sumItems
-// console.log(sumItems([1,4,68,3]));
-// should be 76
+import LDFeatureSpace from './lda/ldfeaturespace';
+var utils = require('./utils'),
+    packKeys = utils.packKeys,
+    sumItems = utils.sumItems;
 
 class LDDocumentFeatureSpace extends LDFeatureSpace {
     TfIdfIn(aFeatureId, aDocumentId) {
@@ -281,9 +200,9 @@ class Matrix {
         return new Matrix(rows, columns, element);
     }
 }
-// takes two Arrays and a callback, and maps into a new Array by calling the callback with same-indexed value from both input Arrays
+
 /**
- *
+ * takes two Arrays and a callback, and maps into a new Array by calling the callback with same-indexed value from both input Arrays
  * @param listA
  * @param listB
  * @param callback
@@ -450,7 +369,6 @@ class LDAllocator {
         for(var i = 0; i < numIterations; i++) {
             this.update();
         }
-        //console.log('LDA THERE AT END');
         return this.model();
     }
 
@@ -493,7 +411,8 @@ class LDAllocator {
         return (new LDModel()).initializeTopicsAndDocumentsAndPriors(
             this.perTopicFeatures,
             this.perDocumentTopics,
-            this.topicPriors);
+            this.topicPriors
+        );
     }
 
     randomize() {
@@ -561,7 +480,6 @@ class LDAllocator {
 
     update() {
         var topic;
-        //console.log('LDA UPDATE THERE');
 
         this.documents.forEach((document, di) => {
             document.forEach((word, wj) => {
@@ -576,7 +494,6 @@ class LDAllocator {
                 this.perWordTopic.set(packedKey, topic);
             });
         });
-        //console.log('LDA UPDATE2 THERE');
     }
 }
 
@@ -616,25 +533,38 @@ var codemine = {
      * @returns Promise<baseDirPath>
      */
     start: function codemineStart(loaderTask) {
-
+        return loaderTask();
     }
 };
 
 function githuRepo(ghDownloadParams) {
-    console.log('DOWNLOAD REPOSITORY FROM GITHUB');
-    return new Promise(function(resolve, reject) {
-        var subRepo = 'sample/' + Date.now() + '/';
+    return function innerGithuRepo() {
+        console.log('DOWNLOAD REPOSITORY FROM GITHUB');
+        return new Promise(function(resolve, reject) {
+            var subRepo = 'sample/' + Date.now() + '/';
 
-        ghdownload(ghDownloadParams, process.cwd() + '/' + subRepo)
-            .on('error', function(err) {
-                reject(err)
-            })
-            .on('end', function() {
-                console.log(subRepo);
+            ghdownload(ghDownloadParams, process.cwd() + '/' + subRepo)
+                .on('error', function(err) {
+                    reject(err)
+                })
+                .on('end', function() {
+                    console.log(subRepo);
 
-                resolve(subRepo);
-            });
-    });
+                    resolve(subRepo);
+                });
+        });
+    }
+}
+
+function localFolder(dir) {
+    return function localFolder() {
+        console.log('USING LOCAL REPOSITORY');
+        return new Promise(function(resolve, reject) {
+            var subRepo = dir + '/';
+
+            resolve(subRepo);
+        });
+    }
 }
 
 function traverseDir(globPattern) {
@@ -745,25 +675,28 @@ class ExtractTextVisitor {
     }
 }
 
-function computeTopicsForIterations(tm) {
-    var lda = new LDAllocator();
-    var methodFeatures = [];
-    tm.methodTexts.forEach(v => {
-        return methodFeatures.push(v)
-    });
-    var iterations = 30; // TODO, HACK: hard-coded value
-    var numTopics = 30; // TODO, HACK: hard-coded value
+function computeTopicsForIterations(numTopics, iterations) {
+    return function innerComputeTopicsForIterations(tm) {
+        var lda = new LDAllocator();
+        var methodFeatures = [];
+        tm.methodTexts.forEach(v => {
+            return methodFeatures.push(v)
+        });
 
-    tm.topicModel = lda.allocateIteratingFeaturesTopics(
-        methodFeatures,
-        iterations,
-        tm.featureSpace.featureCount() + 1,
-        numTopics
-    );
+        tm.topicModel = lda.allocateIteratingFeaturesTopics(
+            methodFeatures,
+            iterations,
+            tm.featureSpace.featureCount() + 1,
+            numTopics
+        );
 
-    return tm;
+        return tm;
+    }
 }
 
+/**
+ *
+ */
 function showAllTopics(tm) {
     //console.log(tm);
     for(var i = 0; i < 30; i++) {
@@ -773,8 +706,11 @@ function showAllTopics(tm) {
     }
 }
 
-githuRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'})
-    .then(traverseDir('lib/engine/**/*.js'))
+codemine.start(
+    //githuRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'})
+    localFolder('sample/bloob/')
+)
+    .then(traverseDir('/lib/physics/**/*.js'))
     .then(readFiles)
     .then(attachAsts)
     .then(modules => modules.map(module => {
@@ -782,9 +718,8 @@ githuRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'})
         return module;
     }))
     .then(extractTextToTopicModel)
-    .then(computeTopicsForIterations)
-    //.then(showAllTopics)
+    .then(computeTopicsForIterations(10, 30)) // compute 10 topics using 30 iterations
+    .then(showAllTopics)
     .then(() => { console.log('END'); })
     .catch(error => { throw error; })
 ;
-
