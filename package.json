@@ -40,7 +40,9 @@
     "type": "git",
     "url": "https://github.com/onsetsu/codemine.git"
   },
-  "scripts": {},
+  "scripts": {
+    "test": "mocha out/test"
+  },
   "dependencies": {
     "esprima": "^2.5.0",
     "estools": "^1.0.3",
@@ -50,7 +52,9 @@
     "gulp-util": "^3.0.6",
     "through2": "^2.0.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "mocha": "^2.3.0"
+  },
   "engines": {
     "node": ">= 0.12.4",
     "npm": "~2.10.1"
