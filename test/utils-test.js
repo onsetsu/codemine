@@ -1,4 +1,5 @@
-// testing sumItems
+"use strict";
+
 var sumItems = require('./../src/utils').sumItems;
 var assert = require("assert");
 
