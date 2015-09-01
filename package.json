@@ -1,6 +1,6 @@
 {
   "name": "codemine",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "description": "Analysing JavaScript modules for hidden aspects using LDA.",
   "keywords": [
     "esprima",
