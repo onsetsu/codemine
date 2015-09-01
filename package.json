@@ -41,7 +41,7 @@
     "url": "https://github.com/onsetsu/codemine.git"
   },
   "scripts": {
-    "test": "mocha out/test"
+    "test": "mocha out/test --recursive"
   },
   "dependencies": {
     "esprima": "^2.5.0",
