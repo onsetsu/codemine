@@ -11,49 +11,10 @@ var utils = require('./utils'),
     range = utils.range,
     Random = utils.Random;
 
-var esprima = require('esprima');
-var estools = require('estools');
-
-var logVisitor = {
-    enter: function(node, parent) {
-        switch(node.type) {
-            case 'Literal':
-                console.log(node.type, node.value);
-                break;
-            case 'Identifier':
-                console.log(node.type, node.name);
-                break;
-            default:
-                console.log(node.type);
-                break;
-        }
-    }
-};
-
-console.log('------------ GULP ------------');
-var gulp = require('gulp');
-var gulpApplyFn = require('./gulp-applyfn');
-
-gulp.task('codemine', function () {
-    return gulp.src('sample/bloob-engine/**/*.js')
-        .pipe(gulpApplyFn(function(file, sourceCode) {
-            //var ast = esprima.parse(sourceCode);
-            //console.log(file.path);
-            //estools.traverse(ast, logVisitor);
-        }));
-});
-
-gulp.start('codemine');
-
-
-console.log('------------ LDA ------------');
-
-var Matrix = require('./math/matrix').Matrix;
-import LDModel from './lda/model';
-
-import LDAllocator from './lda/allocator';
-
 console.log('------------ Glob Mine ------------');
+
+import LDModel from './lda/model';
+import LDAllocator from './lda/allocator';
 
 var glob = require('glob');
 var fs = require('fs');
@@ -162,11 +123,9 @@ class JSTopicModel {
 function extractTextToTopicModel(modules) {
     var tm = new JSTopicModel();
 
-    var frequencies, methodFeatures, docId;
-    frequencies = new Map();
-    methodFeatures = new Map();
-
-    docId = 0;
+    var frequencies = new Map(),
+        methodFeatures = new Map(),
+        docId = 0;
 
     modules.forEach(method => {
         var textVisitor = new ExtractTextVisitor();
@@ -227,14 +186,11 @@ function computeTopicsForIterations(numTopics, iterations) {
     }
 }
 
-/**
- *
- */
-function showAllTopics(tm) {
+function showAllTopics(topicModel) {
     //console.log(tm);
     for(var i = 0; i < 30; i++) {
         console.log(
-            tm.sortedTopic(i).slice(0, 10)
+            topicModel.sortedTopic(i).slice(0, 10)
         );
     }
 }
