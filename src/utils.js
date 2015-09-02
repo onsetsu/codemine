@@ -66,5 +66,5 @@ exports.Random = class Random {
     }
 };
 
-// testing Random
+// TODO: testing Random
 // fillArray(2, 20).forEach(upTo => console.log((new Random()).nextInt(upTo)));
