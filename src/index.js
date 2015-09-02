@@ -50,15 +50,7 @@ console.log('------------ LDA ------------');
 
 var Matrix = require('./math/matrix').Matrix;
 
-/**
- * Calculate cosine similarity on two given vectors, represented as Arrays
- * @param vector1
- * @param vector2
- * @returns {Number}
- */
-function cosineSimilarity(vector1, vector2) {
-    return sumItems(zipMap(vector1, vector2, (i, k) => i * k));
-}
+var cosineSimilarity = require('./math/utils');
 
 class LDModel {
     documentSimilarityOfAnd(doc1, doc2) {
