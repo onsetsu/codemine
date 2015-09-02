@@ -20,3 +20,19 @@ exports.packKeys = (function() {
 exports.sumItems = function sumItems(arr) {
     return arr.reduce((acc, value) => acc + value, 0);
 };
+
+/**
+ * takes two Arrays and a callback, and maps into a new Array by calling the callback with same-indexed value from both input Arrays
+ * @param listA
+ * @param listB
+ * @param callback
+ * @returns {Array}
+ */
+exports.zipMap = function zipMap(listA, listB, callback) {
+    var upTo = Math.min(listA.length, listB.length),
+        arr = [];
+    for(var i = 0; i < upTo; i++) {
+        arr.push(callback(listA[i], listB[i], i, listA, listB));
+    }
+    return arr;
+}
