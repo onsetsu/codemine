@@ -1,4 +1,4 @@
-var cosineSimilarity = require('./../math/utils');
+var cosineSimilarity = require('./../math/utils').cosineSimilarity;
 
 class LDModel {
     documentSimilarityOfAnd(doc1, doc2) {
