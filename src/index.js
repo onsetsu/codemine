@@ -19,6 +19,9 @@ import LDAllocator from './lda/allocator';
 var glob = require('glob');
 var fs = require('fs');
 
+var esprima = require('esprima');
+var estools = require('estools');
+
 // https://www.npmjs.com/package/github-download
 var ghdownload = require('github-download');
 
