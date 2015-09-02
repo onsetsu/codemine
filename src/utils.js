@@ -35,4 +35,36 @@ exports.zipMap = function zipMap(listA, listB, callback) {
         arr.push(callback(listA[i], listB[i], i, listA, listB));
     }
     return arr;
-}
+};
+
+
+exports.timesDo = function timesDo(x, fn) {
+    for(let i = 0; i < x; i++) {
+        fn(x);
+    }
+};
+
+exports.fillArray = function fillArray(value, length) {
+    var arr = [];
+    for(var i = 0; i < length; i++) {
+        arr.push(value);
+    }
+    return arr;
+};
+
+exports.range = function range(end) {
+    var arr = [];
+    for(var i = 0; i < end; i++) {
+        arr.push(i);
+    }
+    return arr;
+};
+
+exports.Random = class Random {
+    nextInt(upTo) {
+        return parseInt((Math.random() * upTo), 10);
+    }
+};
+
+// testing Random
+// fillArray(2, 20).forEach(upTo => console.log((new Random()).nextInt(upTo)));
