@@ -199,8 +199,8 @@ function showAllTopics(topicModel) {
 }
 
 codemine.start(
-    //githuRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'})
-    localFolder('sample/bloob/')
+    githuRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'})
+    //localFolder('sample/bloob/')
 )
     .then(traverseDir('/lib/physics/**/*.js'))
     .then(readFiles)
