@@ -4,7 +4,11 @@ import LDDocumentFeatureSpace from './lda/lddocumentfeaturespace';
 var utils = require('./utils'),
     packKeys = utils.packKeys,
     sumItems = utils.sumItems,
-    zipMap = utils.zipMap;
+    zipMap = utils.zipMap,
+    timesDo = utils.timesDo,
+    fillArray = utils.fillArray,
+    range = utils.range,
+    Random = utils.Random;
 
 var esprima = require('esprima');
 var estools = require('estools');
@@ -43,70 +47,9 @@ gulp.start('codemine');
 
 console.log('------------ LDA ------------');
 
-function timesDo(x, fn) {
-    for(let i = 0; i < x; i++) {
-        fn(x);
-    }
-}
+var Matrix = require('./math/matrix').Matrix;
 
-function fillArray(value, length) {
-    var arr = [];
-    for(var i = 0; i < length; i++) {
-        arr.push(value);
-    }
-    return arr;
-}
-function range(end) {
-    var arr = [];
-    for(var i = 0; i < end; i++) {
-        arr.push(i);
-    }
-    return arr;
-}
-
-// testing range
-// console.log(range(5));
-// console.log(range(25));
-
-class Random {
-    nextInt(upTo) {
-        return parseInt((Math.random() * upTo), 10);
-    }
-}
-
-// testing Random
-// fillArray(2, 20).forEach(upTo => console.log((new Random()).nextInt(upTo)));
-
-class Matrix {
-    constructor(rows, columns, element) {
-        this.contents = [];
-        for(var i = 0; i < rows; i++) {
-            this.contents.push(fillArray(element, columns));
-        }
-    }
-
-    get(row, column) {
-        //console.log(row, column);
-        return this.contents[row][column];
-    }
-
-    set(row, column, value) {
-        return this.contents[row][column] = value;
-    }
-
-    atRow(rowId) {
-        return this.contents[rowId];
-    }
-
-    atColumn(columnId) {
-        return this.contents.map(row => row[columnId]);
-    }
-
-    static rowsColumnsElement(rows, columns, element) {
-        return new Matrix(rows, columns, element);
-    }
-}
-
+var foo = Matrix.rowsColumnsElement(1,2,0);
 /*
  * POLYFILL Array.prototype.findIndex
  * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex
