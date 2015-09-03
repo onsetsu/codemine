@@ -38,7 +38,7 @@ function githuRepo(ghDownloadParams) {
     return function innerGithuRepo() {
         console.log('DOWNLOAD REPOSITORY FROM GITHUB');
         return new Promise(function(resolve, reject) {
-            var subRepo = 'sample/' + Date.now() + '/';
+            var subRepo = 'sample/' + /*Date.now()*/'fooooo' + '/';
 
             ghdownload(ghDownloadParams, process.cwd() + '/' + subRepo)
                 .on('error', function(err) {
