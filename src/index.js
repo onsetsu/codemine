@@ -43,6 +43,7 @@ function githuRepo(ghDownloadParams) {
             ghdownload(ghDownloadParams, process.cwd() + '/' + subRepo)
                 .on('error', function(err) {
                     console.log('ERR DURING GH DOWNLOAD');
+                    console.log(err);
                     reject(err)
                 })
                 .on('end', function() {
@@ -229,12 +230,3 @@ codemine.start(
     .then(() => { console.log('END'); })
     .catch(error => { throw error; })
 ;
-
-ghdownload({user: 'onsetsu', repo: 'bloob', ref: 'master'}, process.cwd() + '/' + 'foobar')
-    .on('error', function(err) {
-        console.log(err);
-        throw err;
-    })
-    .on('end', function() {
-        console.log('GH DOWNLOAD SUCCESSED');
-    });
