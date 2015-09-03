@@ -6,12 +6,10 @@ console.log('------------ Glob Mine ------------');
 
 codemine.start(
     //codemine.githuRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'})
-    //codemine.localFolder('sample/bloob/')
-    codemine.localFolder('out')
+    codemine.localFolder('sample/bloob/')
 )
     .then(codemine.traverseDir(
-        //'/lib/physics/**/*.js'
-        'src/**/*.js'
+        '/lib/physics/**/*.js'
     ))
     .then(codemine.readFiles)
     .then(codemine.attachAsts)

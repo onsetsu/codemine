@@ -25,7 +25,7 @@ var ghdownload = require('github-download');
 
 var codemine = {
     /**
-     * @returns Promise<baseDirPath>
+     * @returns {Promise<baseDirPath>}
      */
     start: function codemineStart(loaderTask) {
         return loaderTask();
@@ -33,6 +33,9 @@ var codemine = {
 
     // TODO: github loader does not work on travis ci
     githuRepo: function githuRepo(ghDownloadParams) {
+        /**
+         * @returns {String} The relative path to which the reposity was loaded
+         */
         return function innerGithuRepo() {
             console.log('DOWNLOAD REPOSITORY FROM GITHUB');
             return new Promise(function(resolve, reject) {

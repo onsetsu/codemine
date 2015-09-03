@@ -23,7 +23,7 @@ before_install:
 # - 'chmod +x generateWrappedZ3.sh'
 # - './generateWrappedZ3.sh'
 
-script: 'npm test && node out/src/index.js && ls sample'
+script: 'npm test'
 
 #after_success: 'npm run benchmark'
 
