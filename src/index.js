@@ -215,3 +215,12 @@ codemine.start(
     .then(() => { console.log('END'); })
     .catch(error => { throw error; })
 ;
+
+ghdownload({user: 'onsetsu', repo: 'bloob', ref: 'master'}, process.cwd() + '/' + 'foobar')
+    .on('error', function(err) {
+        console.log(err);
+        throw err;
+    })
+    .on('end', function() {
+        console.log('GH DOWNLOAD SUCCESSED');
+    });
