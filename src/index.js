@@ -38,7 +38,7 @@ function githuRepo(ghDownloadParams) {
     return function innerGithuRepo() {
         console.log('DOWNLOAD REPOSITORY FROM GITHUB');
         return new Promise(function(resolve, reject) {
-            var subRepo = 'sample/' + /*Date.now()*/'fooooo' + '/';
+            var subRepo = 'sample/' + Date.now() + '/';
 
             ghdownload(ghDownloadParams, process.cwd() + '/' + subRepo)
                 .on('error', function(err) {
@@ -214,10 +214,14 @@ function showAllTopics(topicModel) {
 }
 
 codemine.start(
-    githuRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'})
+    //githuRepo({user: 'onsetsu', repo: 'bloob', ref: 'master'})
     //localFolder('sample/bloob/')
+    localFolder('out')
 )
-    .then(traverseDir('/lib/physics/**/*.js'))
+    .then(traverseDir(
+        //'/lib/physics/**/*.js'
+        '**/*.js'
+    ))
     .then(readFiles)
     .then(attachAsts)
     .then(modules => modules.map(module => {
