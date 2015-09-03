@@ -42,6 +42,7 @@ function githuRepo(ghDownloadParams) {
 
             ghdownload(ghDownloadParams, process.cwd() + '/' + subRepo)
                 .on('error', function(err) {
+                    console.log('ERR DURING GH DOWNLOAD');
                     reject(err)
                 })
                 .on('end', function() {
@@ -76,8 +77,13 @@ function traverseDir(globPattern) {
                 // was found, then files is ["**/*.js"]
                 // er is an error object or null.
                 if(err) {
+                    console.log('ERR DURING GLOB');
+                    console.log(err);
+
                     reject(err);
                 } else {
+                    console.log('GLOB WORKING');
+
                     resolve(files);
                 }
             });
@@ -89,8 +95,11 @@ function readFiles(files) {
     return Promise.all(files.map(fileName => new Promise(function(resolve, reject) {
         fs.readFile(fileName, { encoding: 'utf8' }, function (err, data) {
             if(err) {
+                console.log('ERR DURING READFILE', fileName);
+                console.log(err);
                 reject(err);
             } else {
+                console.log('WORKING READFILE');
                 resolve({
                     fileName: fileName,
                     sourceString: data
@@ -102,7 +111,12 @@ function readFiles(files) {
 
 function attachAsts(files) {
     return files.map(file => {
-        var ast = esprima.parse(file.sourceString);
+        try {
+            var ast = esprima.parse(file.sourceString);
+        } catch(e) {
+            console.log('ERR DURING ATTACH AST');
+            console.log(e);
+        }
         file.ast = ast;
         return file;
     });
