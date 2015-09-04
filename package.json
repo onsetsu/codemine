@@ -44,6 +44,7 @@
     "test": "mocha out/test --recursive"
   },
   "dependencies": {
+    "bluebird": "^2.9.34",
     "esprima": "^2.5.0",
     "estools": "^1.0.3",
     "github-download": "^0.4.0",
