@@ -67,7 +67,7 @@ var codemine = {
 
     traverseDir: function traverseDir(globPattern) {
         return function innerTraverseDir(basePattern) {
-            var pattern = basePattern + globPattern;
+            var pattern = basePattern + '/' + globPattern;
             console.log('APPLY PATTERN', pattern);
             return new Promise(function(resolve, reject) {
                 // options is optional
