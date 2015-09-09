@@ -215,6 +215,18 @@ class Fitness {
                                 mocha.addFile(path);
                             });
 
+                            // 6to5 in out folder, then
+                            // start code with: node out/src/index.js
+                            // TODO: find a way to get the results from a mocha importer
+                            // results = X failed, Y passed tests
+                            // use this for fitness evaluation (fitness = X/(X+Y))
+                            // TODO: when this is done:
+                            // - reset getInitialPopulation to be called with more individuals
+                            // - reenable all tests in sample\codegen\input\test\fib-test.js
+                            // TODO: then track which parts of the tested code are actually affected
+                            // - dynamic function tracing using escodegen to insert statements
+                            // - report the statements somehow
+                            // TODO: then breed new population using mutation and crossover
                             mocha.run()
                                 .on('test', function(test) {
                                     //console.log('Test started: '+test.title);
