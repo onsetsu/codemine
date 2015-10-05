@@ -54,11 +54,13 @@
     "estools": "^1.0.3",
     "estraverse": "^4.1.0",
     "esutils": "^2.0.2",
+    "event-emitter": "^0.3.4",
     "github-download": "^0.4.0",
     "glob": "^5.0.14",
     "gulp": "^3.9.0",
     "gulp-util": "^3.0.6",
     "mkpath": "^0.1.0",
+    "range": "0.0.3",
     "through2": "^2.0.0"
   },
   "devDependencies": {
