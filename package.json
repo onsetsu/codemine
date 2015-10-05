@@ -41,7 +41,11 @@
     "url": "https://github.com/onsetsu/codemine.git"
   },
   "scripts": {
-    "test": "mocha out/test --recursive"
+    "buildme": "babel src --out-dir out/src && babel test --out-dir out/test",
+    "pretest": "npm run-script buildme",
+    "test": "mocha out/test --recursive",
+    "predoit": "npm run-script buildme",
+    "doit": "node out/src/index.js"
   },
   "dependencies": {
     "bluebird": "^2.9.34",
@@ -58,6 +62,7 @@
     "through2": "^2.0.0"
   },
   "devDependencies": {
+    "babel": "^5.8.23",
     "mocha": "^2.3.0"
   },
   "engines": {
