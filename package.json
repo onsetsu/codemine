@@ -27,14 +27,13 @@
     }
   ],
   "files": [
-    "index.js",
-    "TODO"
+    "src/index.js"
   ],
-  "main": "index.js",
+  "main": "src/index.js",
   "bin": "TODO",
   "man": "TODO",
   "directories": {
-    "lib": "TODO"
+    "lib": "src"
   },
   "repository": {
     "type": "git",
